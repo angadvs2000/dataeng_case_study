@@ -1,1 +1,1 @@
-# dataeng_case_study
+# BCG Data Engineering Case Study

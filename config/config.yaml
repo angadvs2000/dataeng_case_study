@@ -1,0 +1,7 @@
+paths:
+  charges: Data/Charges_use.csv
+  damages: Data/Damages_use.csv
+  endorse: Data/Endorse_use.csv
+  primary_person: Data/Primary_Person_use.csv
+  restrict: Data/Restrict_use.csv
+  units: Data/Units_use.csv
