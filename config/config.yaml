@@ -5,3 +5,9 @@ paths:
   primary_person: Data/Primary_Person_use.csv
   restrict: Data/Restrict_use.csv
   units: Data/Units_use.csv
+
+car_body_styles: ['PASSENGER CAR, 2-DOOR','PASSENGER CAR, 4-DOOR','POLICE CAR/TRUCK','SPORT UTILITY VEHICLE']
+no_airbag: ['NOT DEPLOYED','DEPLOYED, SIDE', 'DEPLOYED, REAR']
+alcohol_contrib_factr: ['HAD BEEN DRINKING','UNDER INFLUENCE - ALCOHOL']
+damage_more_than_four: ['DAMAGED 5','DAMAGED 6','DAMAGED 7 HIGHEST']
+car_insurance: ['PROOF OF LIABILITY INSURANCE', 'LIABILITY INSURANCE POLICY']
