@@ -2,8 +2,6 @@ import pandas as pd
 import utils
 
 
-# command line executable through spark-submit
-
 
 class CrashAnalytics:
     '''
