@@ -11,3 +11,29 @@ no_airbag: ['NOT DEPLOYED','DEPLOYED, SIDE', 'DEPLOYED, REAR']
 alcohol_contrib_factr: ['HAD BEEN DRINKING','UNDER INFLUENCE - ALCOHOL']
 damage_more_than_four: ['DAMAGED 5','DAMAGED 6','DAMAGED 7 HIGHEST']
 car_insurance: ['PROOF OF LIABILITY INSURANCE', 'LIABILITY INSURANCE POLICY']
+drvr_lic: ['COMMERCIAL DRIVER LIC.', 'DRIVER LICENSE']
+crash_id_and_unit_nbr: ['CRASH_ID', 'UNIT_NBR']
+columns:
+  veh_body_styl: VEH_BODY_STYL_ID
+  drvr_lic_type: DRVR_LIC_TYPE_ID
+  prsn_type: PRSN_TYPE_ID
+  death_cnt: DEATH_CNT
+  prsn_gndr: PRSN_GNDR_ID
+  crash_id: CRASH_ID
+  unit_nbr: UNIT_NBR
+  vin: VIN
+  veh_make: VEH_MAKE_ID
+  prsn_airbag: PRSN_AIRBAG_ID
+  veh_hnr: VEH_HNR_FL
+  drvr_lic_state: DRVR_LIC_STATE_ID
+  tot_injry_cnt: TOT_INJRY_CNT
+  prsn_ethnicity: PRSN_ETHNICITY_ID
+  contrib_factr_p1: CONTRIB_FACTR_P1_ID
+  drvr_zip: DRVR_ZIP
+  veh_dmag_scl_1: VEH_DMAG_SCL_1_ID
+  veh_dmag_scl_2: VEH_DMAG_SCL_2_ID
+  damaged_property: DAMAGED_PROPERTY
+  fin_resp_type: FIN_RESP_TYPE_ID
+  veh_color: VEH_COLOR_ID
+  veh_lic_state: VEH_LIC_STATE_ID
+  charge: CHARGE
