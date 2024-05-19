@@ -1,5 +1,5 @@
-import utils
 import pandas as pd
+import utils
 
 
 
@@ -15,11 +15,12 @@ class CrashAnalytics:
         self.charge_df = self.data.charges()
         self.damage_df = self.data.damages()
         self.config = self.data.data
+        self.columns = self.config['columns']
 
         # Pre-calculated values that are used multiple times in the below code
-        self.car_unit_df = self.unit_df[self.unit_df['VEH_BODY_STYL_ID'].isin(self.config['car_body_styles'])]
-        self.valid_lic_driver_df = self.primary_df[self.primary_df['DRVR_LIC_TYPE_ID'].isin(['COMMERCIAL DRIVER LIC.', 'DRIVER LICENSE']) &
-                                              (self.primary_df['PRSN_TYPE_ID'] == 'DRIVER')][['CRASH_ID', 'UNIT_NBR']]
+        self.car_unit_df = self.unit_df[self.unit_df[self.columns['veh_body_styl']].isin(self.config['car_body_styles'])]
+        self.valid_lic_driver_df = self.primary_df[self.primary_df[self.columns['drvr_lic_type']].isin(self.config['drvr_lic']) & 
+                                (self.primary_df[self.columns['prsn_type']] == 'DRIVER')][self.config['crash_id_and_unit_nbr']]
 
 
     def crashes_with_more_than_2_males_killed(self):
@@ -30,9 +31,10 @@ class CrashAnalytics:
             int: count of crashes
         '''
 
-        crashes_with_male_deaths = self.primary_df[(self.primary_df['DEATH_CNT'] == 1) & 
-                                (self.primary_df['PRSN_GNDR_ID'] == 'MALE')][['CRASH_ID','DEATH_CNT']].groupby('CRASH_ID').sum()
-        male_fatal_crashes_count = crashes_with_male_deaths[crashes_with_male_deaths['DEATH_CNT'] > 2]
+        crashes_with_male_deaths = self.primary_df[(self.primary_df[self.columns['death_cnt']] == 1) & 
+                                (self.primary_df[self.columns['prsn_gndr']] == 
+                                 'MALE')][[self.columns['crash_id'],self.columns['death_cnt']]].groupby(self.columns['crash_id']).sum()
+        male_fatal_crashes_count = crashes_with_male_deaths[crashes_with_male_deaths[self.columns['death_cnt']] > 2]
         return len(male_fatal_crashes_count)
     
 
@@ -44,11 +46,12 @@ class CrashAnalytics:
             int: count of distinct two wheelers
         '''
 
-        twowheelers_df = self.unit_df[(self.unit_df['VEH_BODY_STYL_ID'] == 'MOTORCYCLE') | 
-                                    (self.unit_df['VEH_BODY_STYL_ID'] == 'POLICE MOTORCYCLE')]
-        merged_df = pd.merge(twowheelers_df[['CRASH_ID', 'UNIT_NBR', 'VIN']], 
-                             self.charge_df[['CRASH_ID', 'UNIT_NBR']], on=['CRASH_ID', 'UNIT_NBR'], how='inner')
-        return len(set(merged_df['VIN']))
+        twowheelers_df = self.unit_df[(self.unit_df[self.columns['veh_body_styl']] == 'MOTORCYCLE') | 
+                                    (self.unit_df[self.columns['veh_body_styl']] == 'POLICE MOTORCYCLE')]
+        merged_df = pd.merge(twowheelers_df[[self.columns['crash_id'], self.columns['unit_nbr'], self.columns['vin']]], 
+                             self.charge_df[self.config['crash_id_and_unit_nbr']], 
+                             on=self.config['crash_id_and_unit_nbr'], how='inner')
+        return len(set(merged_df[self.columns['vin']]))
     
 
     def top_car_makes_with_fatal_crashes_and_no_airbag(self):
@@ -65,13 +68,13 @@ class CrashAnalytics:
         Returns:
             list: top 5 car makes
         '''
-        vehicle_unit_df = self.car_unit_df[['CRASH_ID', 'UNIT_NBR', 'VEH_MAKE_ID']]
-        filtered_person_df = self.primary_df[(self.primary_df['PRSN_AIRBAG_ID'].isin(self.config['no_airbag'])) & 
-                                             (self.primary_df['PRSN_TYPE_ID'] == 'DRIVER') & 
-                                             (self.primary_df['DEATH_CNT'] == 1)][['CRASH_ID', 'UNIT_NBR']]
-        merged_df = pd.merge(vehicle_unit_df, filtered_person_df, on=['CRASH_ID', 'UNIT_NBR'], how='inner')
-        top_veh_makes_in_merged_df = list(merged_df[['VEH_MAKE_ID']].groupby(
-            'VEH_MAKE_ID').size().sort_values(ascending=False).reset_index()['VEH_MAKE_ID'][:5])
+        vehicle_unit_df = self.car_unit_df[[self.columns['crash_id'], self.columns['unit_nbr'], self.columns['veh_make']]]
+        filtered_person_df = self.primary_df[(self.primary_df[self.columns['prsn_airbag']].isin(self.config['no_airbag'])) & 
+                                             (self.primary_df[self.columns['prsn_type']] == 'DRIVER') & 
+                                             (self.primary_df[self.columns['death_cnt']] == 1)][self.config['crash_id_and_unit_nbr']]
+        merged_df = pd.merge(vehicle_unit_df, filtered_person_df, on=self.config['crash_id_and_unit_nbr'], how='inner')
+        top_veh_makes_in_merged_df = list(merged_df[[self.columns['veh_make']]].groupby(
+            self.columns['veh_make']).size().sort_values(ascending=False).reset_index()[self.columns['veh_make']][:5])
         return top_veh_makes_in_merged_df
     
     
@@ -86,9 +89,10 @@ class CrashAnalytics:
             int: count of distinct Vehicles
         '''
 
-        hit_and_run_df = self.unit_df[self.unit_df['VEH_HNR_FL']=='Y'][['CRASH_ID', 'UNIT_NBR','VIN']]
-        merged_df = pd.merge(self.valid_lic_driver_df, hit_and_run_df, on=['CRASH_ID', 'UNIT_NBR'], how='inner')
-        return len(set(merged_df['VIN']))
+        hit_and_run_df = self.unit_df[self.unit_df[self.columns['veh_hnr']]=='Y'][[self.columns['crash_id'], 
+                                                                                   self.columns['unit_nbr'],self.columns['vin']]]
+        merged_df = pd.merge(self.valid_lic_driver_df, hit_and_run_df, on=self.config['crash_id_and_unit_nbr'], how='inner')
+        return len(set(merged_df[self.columns['vin']]))
     
     
     def state_with_highest_acccidents_without_females(self):
@@ -102,13 +106,15 @@ class CrashAnalytics:
             str: name of state with most vehicle crashes
         '''
 
-        merge_vin_with_primary = self.primary_df.merge(self.unit_df[['CRASH_ID', 'UNIT_NBR', 'VIN']], 
-                                                       on=['CRASH_ID', 'UNIT_NBR'], how='left')
-        crashes_with_women = list(set(merge_vin_with_primary[merge_vin_with_primary['PRSN_GNDR_ID'] == 'FEMALE']['CRASH_ID']))
-        crashes_without_women = merge_vin_with_primary[~merge_vin_with_primary['CRASH_ID'].isin(crashes_with_women)][['CRASH_ID',
-                                                    'DRVR_LIC_STATE_ID']].drop_duplicates(subset=['CRASH_ID'], keep='first')
-        state_with_highest_crashes = crashes_without_women[['DRVR_LIC_STATE_ID']].groupby(
-            'DRVR_LIC_STATE_ID').size().sort_values(ascending=False).reset_index()['DRVR_LIC_STATE_ID'][0]
+        merge_vin_with_primary = self.primary_df.merge(self.unit_df[[self.columns['crash_id'],
+                            self.columns['unit_nbr'], self.columns['vin']]], on=self.config['crash_id_and_unit_nbr'], how='left')
+        crashes_with_women = list(set(merge_vin_with_primary[merge_vin_with_primary[self.columns['prsn_gndr']] == 
+                                                             'FEMALE'][self.columns['crash_id']]))
+        crashes_without_women = merge_vin_with_primary[~merge_vin_with_primary[self.columns['crash_id']].isin(
+                                crashes_with_women)][[self.columns['crash_id'], 
+                                self.columns['drvr_lic_state']]].drop_duplicates(subset=[self.columns['crash_id']], keep='first')
+        state_with_highest_crashes = crashes_without_women[[self.columns['drvr_lic_state']]].groupby(
+            self.columns['drvr_lic_state']).size().sort_values(ascending=False).reset_index()[self.columns['drvr_lic_state']][0]
         return state_with_highest_crashes
 
 
@@ -120,10 +126,10 @@ class CrashAnalytics:
             list: list of top 3rd to 5th vehicle makes
         '''
 
-        self.unit_df['total_injuries'] = self.unit_df['TOT_INJRY_CNT'] + self.unit_df['DEATH_CNT']
-        groupby_vehicle = self.unit_df[['VEH_MAKE_ID','total_injuries']].groupby(
-            'VEH_MAKE_ID').sum().sort_values(by='total_injuries', ascending=False).reset_index()
-        top_vehicles = list(groupby_vehicle['VEH_MAKE_ID'][2:5])
+        self.unit_df['total_injuries'] = self.unit_df[self.columns['tot_injry_cnt']] + self.unit_df[self.columns['death_cnt']]
+        groupby_vehicle = self.unit_df[[self.columns['veh_make'],'total_injuries']].groupby(
+            self.columns['veh_make']).sum().sort_values(by='total_injuries', ascending=False).reset_index()
+        top_vehicles = list(groupby_vehicle[self.columns['veh_make']][2:5])
         return top_vehicles
     
 
@@ -135,14 +141,14 @@ class CrashAnalytics:
             pandas.DataFrame: DataFrame with vehicle body style and the top ethnic group as the columns
         '''
         
-        merge_ethnicity = self.unit_df.merge(self.primary_df[['CRASH_ID', 'UNIT_NBR', 'PRSN_ETHNICITY_ID']], 
-                                             on=['CRASH_ID', 'UNIT_NBR'], how='left')
-        groupby_bodystyle_ethnicity = merge_ethnicity.groupby(['VEH_BODY_STYL_ID', 
-                                                               'PRSN_ETHNICITY_ID']).size().reset_index().rename(columns={0:'count'})
+        merge_ethnicity = self.unit_df.merge(self.primary_df[[self.columns['crash_id'], self.columns['unit_nbr'], 
+                                            self.columns['prsn_ethnicity']]], on=self.config['crash_id_and_unit_nbr'], how='left')
+        groupby_bodystyle_ethnicity = merge_ethnicity.groupby([self.columns['veh_body_styl'], 
+                                        self.columns['prsn_ethnicity']]).size().reset_index().rename(columns={0:'count'})
         get_maxcount_ethnicity = groupby_bodystyle_ethnicity[groupby_bodystyle_ethnicity.groupby(
-            'VEH_BODY_STYL_ID')['count'].transform('max') == groupby_bodystyle_ethnicity['count']]
-        return get_maxcount_ethnicity.reset_index()[['VEH_BODY_STYL_ID', 
-                                       'PRSN_ETHNICITY_ID']].rename(columns={'PRSN_ETHNICITY_ID': 'TOP_ETHNICITY'})
+            self.columns['veh_body_styl'])['count'].transform('max') == groupby_bodystyle_ethnicity['count']]
+        return get_maxcount_ethnicity.reset_index()[[self.columns['veh_body_styl'], 
+                                       self.columns['prsn_ethnicity']]].rename(columns={self.columns['prsn_ethnicity']: 'TOP_ETHNICITY'})
     
 
     def top_5_zipcodes_with_alc_as_contrib_factr(self):
@@ -157,12 +163,13 @@ class CrashAnalytics:
             list: top 5 zipcodes
         '''
         
-        alcohol_car_crashes = self.car_unit_df[self.car_unit_df['CONTRIB_FACTR_P1_ID'].isin(
-            self.config['alcohol_contrib_factr'])][['CRASH_ID', 'UNIT_NBR']]
-        add_zip_data = alcohol_car_crashes.merge(self.primary_df[['CRASH_ID', 'UNIT_NBR', 'DRVR_ZIP']], 
-                                                 on=['CRASH_ID', 'UNIT_NBR'], how='left')
-        groupby_zip = add_zip_data.groupby('DRVR_ZIP').size()
-        top_5_zipcodes = list(groupby_zip.sort_values(ascending=False).reset_index()['DRVR_ZIP'][:5])
+        alcohol_car_crashes = self.car_unit_df[self.car_unit_df[self.columns['contrib_factr_p1']].isin(
+            self.config['alcohol_contrib_factr'])][self.config['crash_id_and_unit_nbr']]
+        add_zip_data = alcohol_car_crashes.merge(self.primary_df[[self.columns['crash_id'], 
+                                                self.columns['unit_nbr'], self.columns['drvr_zip']]], 
+                                                on=self.config['crash_id_and_unit_nbr'], how='left')
+        groupby_zip = add_zip_data.groupby(self.columns['drvr_zip']).size()
+        top_5_zipcodes = list(groupby_zip.sort_values(ascending=False).reset_index()[self.columns['drvr_zip']][:5])
         return top_5_zipcodes
     
     
@@ -181,12 +188,13 @@ class CrashAnalytics:
             int: number of distinct vehicles
         '''
         
-        filter_data_damage = self.car_unit_df[(self.car_unit_df['VEH_DMAG_SCL_1_ID'].isin(self.config['damage_more_than_four']))|
-                             (self.car_unit_df['VEH_DMAG_SCL_2_ID'].isin(self.config['damage_more_than_four']))]
-        crashes_with_prop_damage = list(set(self.damage_df[self.damage_df['DAMAGED_PROPERTY'].notna()]['CRASH_ID']))
-        combined_data = filter_data_damage[~filter_data_damage['CRASH_ID'].isin(crashes_with_prop_damage)]
-        data_with_insurance = combined_data[combined_data['FIN_RESP_TYPE_ID'].isin(self.config['car_insurance'])]
-        return len(set(data_with_insurance['CRASH_ID']))
+        filter_data_damage = self.car_unit_df[(self.car_unit_df[self.columns[
+                            'veh_dmag_scl_1']].isin(self.config['damage_more_than_four']))|
+                             (self.car_unit_df[self.columns['veh_dmag_scl_2']].isin(self.config['damage_more_than_four']))]
+        crashes_with_prop_damage = list(set(self.damage_df[self.damage_df[self.columns['damaged_property']].notna()][self.columns['crash_id']]))
+        combined_data = filter_data_damage[~filter_data_damage[self.columns['crash_id']].isin(crashes_with_prop_damage)]
+        data_with_insurance = combined_data[combined_data[self.columns['fin_resp_type']].isin(self.config['car_insurance'])]
+        return len(set(data_with_insurance[self.columns['crash_id']]))
     
 
     def top_veh_makes_in_speeding_accidents(self):
@@ -206,19 +214,23 @@ class CrashAnalytics:
             list: top 5 vehicle makes
         '''
         
-        speeding_charge = self.charge_df[(self.charge_df['CHARGE'].notna())&
-                                         (self.charge_df['CHARGE'].str.contains('SPEED'))][['CRASH_ID', 'UNIT_NBR']]
-        speeding_on_validlic_driver = self.valid_lic_driver_df.merge(speeding_charge,  on=['CRASH_ID', 'UNIT_NBR'], how='inner')
-        car_speeding_on_validlic_driver = pd.merge(self.car_unit_df, speeding_on_validlic_driver[['CRASH_ID', 'UNIT_NBR']], 
-                                                on=['CRASH_ID', 'UNIT_NBR'], how='inner')
-        top_veh_colours = list(self.unit_df[['VEH_COLOR_ID']].groupby(
-            'VEH_COLOR_ID').size().sort_values(ascending=False).reset_index()['VEH_COLOR_ID'][:10])
-        states_with_offenses = pd.merge(self.unit_df[['CRASH_ID', 'UNIT_NBR', 'VEH_LIC_STATE_ID']], 
-                                        self.charge_df[['CRASH_ID', 'UNIT_NBR']], on=['CRASH_ID', 'UNIT_NBR'], how='inner')
+        speeding_charge = self.charge_df[(self.charge_df[self.columns['charge']].notna())&
+                                         (self.charge_df[self.columns['charge']].str.contains('SPEED'))][
+                                             self.config['crash_id_and_unit_nbr']]
+        speeding_on_validlic_driver = self.valid_lic_driver_df.merge(speeding_charge,  
+                                                                     on=self.config['crash_id_and_unit_nbr'], how='inner')
+        car_speeding_on_validlic_driver = pd.merge(self.car_unit_df, 
+                                                speeding_on_validlic_driver[self.config['crash_id_and_unit_nbr']], 
+                                                on=self.config['crash_id_and_unit_nbr'], how='inner')
+        top_veh_colours = list(self.unit_df[[self.columns['veh_color']]].groupby(
+            self.columns['veh_color']).size().sort_values(ascending=False).reset_index()[self.columns['veh_color']][:10])
+        states_with_offenses = pd.merge(self.unit_df[[self.columns['crash_id'], self.columns['unit_nbr'], self.columns['veh_lic_state']]], 
+                                        self.charge_df[self.config['crash_id_and_unit_nbr']], 
+                                        on=self.config['crash_id_and_unit_nbr'], how='inner')
         top_states_with_offenses = list(states_with_offenses.groupby(
-            'VEH_LIC_STATE_ID').size().sort_values(ascending=False).reset_index()['VEH_LIC_STATE_ID'][:25])
-        combined_data = car_speeding_on_validlic_driver[(car_speeding_on_validlic_driver['VEH_COLOR_ID'].isin(top_veh_colours))&
-                                                    (car_speeding_on_validlic_driver['VEH_LIC_STATE_ID'].isin(top_states_with_offenses))]
-        top_veh_makes = list(combined_data[['VEH_MAKE_ID']].groupby(
-            'VEH_MAKE_ID').size().sort_values(ascending=False).reset_index()['VEH_MAKE_ID'][:5])
+            self.columns['veh_lic_state']).size().sort_values(ascending=False).reset_index()[self.columns['veh_lic_state']][:25])
+        combined_data = car_speeding_on_validlic_driver[(car_speeding_on_validlic_driver[self.columns['veh_color']].isin(top_veh_colours))&
+                                            (car_speeding_on_validlic_driver[self.columns['veh_lic_state']].isin(top_states_with_offenses))]
+        top_veh_makes = list(combined_data[[self.columns['veh_make']]].groupby(
+            self.columns['veh_make']).size().sort_values(ascending=False).reset_index()[self.columns['veh_make']][:5])
         return top_veh_makes
