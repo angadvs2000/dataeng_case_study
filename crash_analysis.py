@@ -2,7 +2,6 @@ import pandas as pd
 import utils
 
 
-
 class CrashAnalytics:
     '''
     Answers all mentioned questions
